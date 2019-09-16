@@ -52,3 +52,15 @@ class TestPipe(object):
                            [4,3,1]], columns=['a','b','c'])
         pipe = P | _x_[_x_['a'] > 2].shape[0] 
         assert pipe(df) == 1
+        assert df | P | pipe | END == 1
+
+    def test_with_numpy(self):
+        import numpy as np
+        a = np.arange(10)
+        pipe = P | np.sum
+        assert pipe(a) == 45
+        pipe = P | np.sin | _x_.shape[0]
+        assert pipe(a) == 10
+        pipe = P | np.sin(_x_) | _x_.shape[0]
+        assert pipe(a) == 10
+        assert a | P | pipe | END == 10

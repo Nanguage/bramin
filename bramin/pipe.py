@@ -43,28 +43,42 @@ class CallChain(object):
     def _process(self, func:Callable, old:Any) -> Any:
         return func(old)
 
-    def append(self, func:Callable):
+    def _append(self, func:Callable):
         if not callable(func):
             raise TypeError(f"{func} is not callable.")
         self._chain.append(func)
 
 
-class InstanceWithOr(type):
-    def __or__(cls, right):
-        p = cls()
+class MetaPipe(type):
+    """Control the behavior of pass object into pipe directly:
+    obj | P | ... | END
+    """
+    def __or__(self, right):
+        p = self()
         return p | right
 
-    def __ror__(cls, left):
-        return cls(_input=left)
+    def __ror__(self, left):
+        return self(_input=left)
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        import numpy as np
+        if ufunc is np.bitwise_or:
+            return self(_input=inputs[0])
+        else:
+            return NotImplemented
 
 
-class Pipe(CallChain, metaclass=InstanceWithOr):
+class Pipe(CallChain, metaclass=MetaPipe):
     def __or__(self, right:Union[Callable, END]):
         if right is END:
             return self.__call__(self._input)
         elif right is placeholder:
             ph = placeholder([lambda x:x])  # add an identity func
             chain_ = self._chain + [ph]
+            p = type(self)(chain_, self._input)
+            return p
+        elif isinstance(right, Pipe):  # concat two Pipe obj
+            chain_ = self._chain+right._chain
             p = type(self)(chain_, self._input)
             return p
         elif callable(right):
@@ -114,7 +128,7 @@ class MetaPlaceHolder(type):
         def make_mths(ph, op, tp, impl):
             def _mimic(self, *args, **kwargs):
                 f = partial(impl, ph, *args, **kwargs)
-                self.append(f)
+                self._append(f)
                 return self
             return _mimic
         _assign_special_methods(ph, make_mths)
@@ -122,21 +136,26 @@ class MetaPlaceHolder(type):
     def __repr__(self) -> str:
         return '_x_'
 
-    def __getattr__(self, name):
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        """Support numpy ndarray
+        see:
+        https://docs.scipy.org/doc/numpy-1.13.0/neps/ufunc-overrides.html"""
         ph = self()
-        f = partial(getattr, self, name)
-        ph.append(f)
-        return ph
+        f = partial(ufunc, *inputs, **kwargs)
+        ph._append(f)
+        return self
 
 
 def _assign_special_methods(obj, make_mimic):
     def filter_(name, tp):
-        if name in ['or', 'ror']:
+        black_list = ['or', 'ror', 'getattribute', 'setattr', 'delattr']
+        if name in black_list:
             return False
         return True
 
     for _op, _tp, _impl in SpecialMethods(
-        ['numeric/left', 'numeric/right', 'container', 'basic/compare'],
+        ['numeric/left', 'numeric/right', 'container',
+         'basic/compare', 'attribute_access/attr'],
         filter_,
         with_impl=True
     ):
@@ -147,7 +166,7 @@ def _make_meta_mths(obj, op, tp, impl):
     def _mimic(self, *args, **kwargs):
         ph = self()
         f = partial(impl, self, *args, **kwargs)
-        ph.append(f)
+        ph._append(f)
         return ph
     return _mimic
 
@@ -156,11 +175,6 @@ _assign_special_methods(MetaPlaceHolder, _make_meta_mths)
 
 
 class placeholder(CallChain, metaclass=MetaPlaceHolder):
-
-    def __getattr__(self, name):
-        f = partial(getattr, placeholder, name)
-        self.append(f)
-        return self
 
     def __index__(self):
         return id(self)
@@ -183,3 +197,8 @@ class placeholder(CallChain, metaclass=MetaPlaceHolder):
             return cls._eval(ph(_input), _input)
         else:
             return ph
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        f = partial(ufunc, *inputs, **kwargs)
+        self._append(f)
+        return self
