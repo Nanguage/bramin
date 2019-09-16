@@ -7,9 +7,7 @@ import operator
 from operator import add
 
 import sys; sys.path.insert(0, '.')
-from bramin import Pipe as P
-from bramin import placeholder as _x_
-from bramin import END
+from bramin import *
 
 inc = c(map, lambda x: x + 1)
 
@@ -53,6 +51,7 @@ class TestPipe(object):
         pipe = P | _x_[_x_['a'] > 2].shape[0] 
         assert pipe(df) == 1
         assert df | P | pipe | END == 1
+        assert df | P | _x_[_x_['a'] > 2].shape[0] | END == 1
 
     def test_with_numpy(self):
         import numpy as np
@@ -64,3 +63,14 @@ class TestPipe(object):
         pipe = P | np.sin(_x_) | _x_.shape[0]
         assert pipe(a) == 10
         assert a | P | pipe | END == 10
+
+        b = np.linspace(0, 2*np.pi, 100)
+        import matplotlib.pyplot as plt
+        pipe = P | c(plt.plot, _x_, np.sin(_x_), 'r')
+        assert b | P | pipe | END
+        pipe = P | _x_[:10]
+        assert (b | P | pipe | END).shape[0] == 10
+        pipe = P | (_x_ > np.pi)
+        assert sum(pipe(b)) == 50
+        pipe = P | _x_[_x_ > np.pi]
+        assert pipe(b).min() > np.pi

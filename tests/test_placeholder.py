@@ -1,5 +1,5 @@
 import sys; sys.path.insert(0, '.')
-from bramin import *
+from bramin.pipe import placeholder
 
 import operator
 

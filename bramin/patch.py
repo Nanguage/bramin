@@ -1,9 +1,8 @@
 from functools import wraps
 
-from .pipe import Pipe
-
 
 def patch_op(obj, op):
+    from .pipe import Pipe
     real = getattr(obj, op)
     @wraps(real)
     def fake(self, other):
@@ -20,11 +19,12 @@ def patch(obj):
     patch_op(obj, '__or__')
 
 
-# patch pandas
-try:
-    import pandas as pd
-    patch(pd.DataFrame)
-    patch(pd.Series)
-    patch(pd.Index)
-except ImportError:
-    pass
+def patch_all():
+    # patch pandas
+    try:
+        import pandas as pd
+        patch(pd.DataFrame)
+        patch(pd.Series)
+        patch(pd.Index)
+    except ImportError:
+        pass

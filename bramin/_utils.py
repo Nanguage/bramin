@@ -125,15 +125,18 @@ def is_partial_like(func:Callable):
 
 
 def replace_partial_args(
-        func:Callable, old:Any, new:Any,
-        match_func:Optional[Callable]=None
+        func:Callable, target:Any, repl:Any,
+        match_func:Optional[Callable]=None,
+        replace_func:Optional[Callable]=None,
     ) -> Callable:
     """Replace partial-like object's argument,
     return a new callable"""
     if match_func is None:
-        match_func = lambda a, b: a is b
-    args   = [(new   if match_func(v, old) else v) for v in func.args]
-    kwargs = {k:(new if match_func(v, old) else v) for k, v in func.keywords.items()}
+        match_func = lambda v, t: v is t
+    if replace_func is None:
+        replace_func = lambda v, r: r
+    args   = [  (replace_func(v, repl) if match_func(v, target) else v) for v    in func.args]
+    kwargs = {k:(replace_func(v, repl) if match_func(v, target) else v) for k, v in func.keywords.items()}
     new_func = type(func)(func.func, *args, **kwargs)
     return new_func
 

@@ -99,6 +99,9 @@ class Pipe(CallChain, metaclass=MetaPipe):
             # because MetaPlaceHolder reloaded __eq__, shold convert args to set
             # replace placeholder to real pass-in
             func = replace_partial_args(func, placeholder, old)
+            func = replace_partial_args(func, placeholder, old,
+                match_func   = lambda v, t: isinstance(v, t),
+                replace_func = lambda v, r: placeholder(v._chain, r))
             new = func()
         else:
             new = func(old)
@@ -143,7 +146,7 @@ class MetaPlaceHolder(type):
         ph = self()
         f = partial(ufunc, *inputs, **kwargs)
         ph._append(f)
-        return self
+        return ph
 
 
 def _assign_special_methods(obj, make_mimic):
@@ -177,7 +180,7 @@ _assign_special_methods(MetaPlaceHolder, _make_meta_mths)
 class placeholder(CallChain, metaclass=MetaPlaceHolder):
 
     def __index__(self):
-        return id(self)
+        return self
 
     def __repr__(self) -> str:
         return f'<ph at {hex(id(self))}>'
