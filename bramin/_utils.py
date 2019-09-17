@@ -111,6 +111,7 @@ def reverse_args(func:Callable) -> Callable:
     """reverse func's args"""
     def wrapper(*args):
         return func(*args[::-1])
+    wrapper.func = func
     return wrapper
 
 
@@ -132,11 +133,11 @@ def replace_partial_args(
     """Replace partial-like object's argument,
     return a new callable"""
     if match_func is None:
-        match_func = lambda v, t: v is t
+        match_func = lambda i, v, t: v is t
     if replace_func is None:
         replace_func = lambda v, r: r
-    args   = [  (replace_func(v, repl) if match_func(v, target) else v) for v    in func.args]
-    kwargs = {k:(replace_func(v, repl) if match_func(v, target) else v) for k, v in func.keywords.items()}
+    args   = [  (replace_func(v, repl) if match_func(i, v, target) else v) for i, v in enumerate(func.args)]
+    kwargs = {k:(replace_func(v, repl) if match_func(k, v, target) else v) for k, v in func.keywords.items()}
     new_func = type(func)(func.func, *args, **kwargs)
     return new_func
 

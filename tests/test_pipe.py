@@ -35,6 +35,11 @@ class TestPipe(object):
         assert ans == list(range(1, 11))
         ans = range(5) | P | c(toolz.accumulate, add, _x_) | list | END
         assert ans == [0, 1, 3, 6, 10]
+        pipe = P | _x_ + _x_
+        assert pipe(1) == 2
+        pipe = P | _x_ + _x_ + _x_ - 1
+        assert pipe(1) == 2
+        assert pipe(1) == 2
 
     def test_placeholder_in_pipe(self):
         id_f = P | _x_
@@ -65,9 +70,9 @@ class TestPipe(object):
         assert a | P | pipe | END == 10
 
         b = np.linspace(0, 2*np.pi, 100)
-        import matplotlib.pyplot as plt
-        pipe = P | c(plt.plot, _x_, np.sin(_x_), 'r')
-        assert b | P | pipe | END
+        pipe = P | c(add, _x_, np.sin(_x_))
+        assert type(pipe(b)) is np.ndarray
+        assert pipe(b).shape == b.shape
         pipe = P | _x_[:10]
         assert (b | P | pipe | END).shape[0] == 10
         pipe = P | (_x_ > np.pi)

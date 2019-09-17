@@ -4,6 +4,7 @@ from typing import (
 import types
 from copy import copy
 from functools import partial
+import operator
 
 from ._utils import (
     SpecialMethods,
@@ -100,8 +101,8 @@ class Pipe(CallChain, metaclass=MetaPipe):
             # replace placeholder to real pass-in
             func = replace_partial_args(func, placeholder, old)
             func = replace_partial_args(func, placeholder, old,
-                match_func   = lambda v, t: isinstance(v, t),
-                replace_func = lambda v, r: placeholder(v._chain, r))
+                match_func   = lambda i, v, t: isinstance(v, t),
+                replace_func = lambda v, r: v(r))
             new = func()
         else:
             new = func(old)
@@ -180,7 +181,7 @@ _assign_special_methods(MetaPlaceHolder, _make_meta_mths)
 class placeholder(CallChain, metaclass=MetaPlaceHolder):
 
     def __index__(self):
-        return self
+        return id(self)
 
     def __repr__(self) -> str:
         return f'<ph at {hex(id(self))}>'
@@ -188,7 +189,16 @@ class placeholder(CallChain, metaclass=MetaPlaceHolder):
     def _process(self, func:Callable, old:Any) -> Any:
         if is_partial_like(func):
             # replace placeholder to real pass-in
-            func = replace_partial_args(func, placeholder, old)
+            func = replace_partial_args(func, placeholder, old,
+                match_func = lambda i, v, t: (i == 0) and v is t)
+            func = replace_partial_args(func, placeholder, self._input,
+                match_func = lambda i, v, t: (i >  0) and v is t)
+            if func.func is operator.getitem:
+                def _replace(v, r):
+                    return v(r) if len(v._chain) > 0 else old
+                func = replace_partial_args(func, placeholder, old,
+                    match_func   = lambda i, v, t: isinstance(v, t),
+                    replace_func = _replace)
             new = func()
         else:
             new = func(old)
