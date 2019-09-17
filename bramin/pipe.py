@@ -10,6 +10,7 @@ from ._utils import (
     SpecialMethods,
     is_partial_like, replace_partial_args, format_partial
 )
+from .io import callable_file
 
 
 class END(object): pass
@@ -61,6 +62,10 @@ class MetaPipe(type):
     def __ror__(self, left):
         return self(_input=left)
 
+    def __rrshift__(self, left):
+        p = self()
+        return p | callable_file(left)
+
     def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
         import numpy as np
         if ufunc is np.bitwise_or:
@@ -87,7 +92,23 @@ class Pipe(CallChain, metaclass=MetaPipe):
             p = type(self)(chain_, self._input)
             return p
         else:
-            raise TypeError(f"Expect END or callable, got {right}: {type(right)}")
+            msg = "Pipe's __or__ method Expect END or callable, " + \
+                 f"got {right}: {type(right)}"
+            raise TypeError(msg)
+
+    def __rshift__(self, other:str):
+        if not isinstance(other, str):
+            raise TypeError(f"Pipe's __rshift__ method expect string, got {type(other)}")
+        chain_ = self._chain + [callable_file(other, 'a')]
+        p = type(self)(chain_, self._input)
+        return p
+
+    def __gt__(self, other:str):
+        if not isinstance(other, str):
+            raise TypeError(f"Pipe's __gt__ method expect string, got {type(other)}")
+        chain_ = self._chain + [callable_file(other, 'w')]
+        p = type(self)(chain_, self._input)
+        return p
 
     def _process(self, func:Callable, old:Any) -> Any:
         if isinstance(func, placeholder):

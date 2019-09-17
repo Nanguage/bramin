@@ -79,3 +79,30 @@ class TestPipe(object):
         assert sum(pipe(b)) == 50
         pipe = P | _x_[_x_ > np.pi]
         assert pipe(b).min() > np.pi
+
+
+    def test_write_text(self):
+        def gen_lines():
+            for i in range(10):
+                yield str(i)*i + "\n"
+        tmp_f = "/tmp/bramin_test.1.txt"
+        (gen_lines() | P | c(filter, lambda l: len(l.strip()) > 0) > tmp_f) | END
+        with open(tmp_f) as f:
+            lines = f.readlines()
+            assert lines == list(gen_lines())[1:]
+        (gen_lines() | P | c(filter, lambda l: len(l.strip()) > 0)) >> tmp_f | END
+        with open(tmp_f) as f:
+            lines = f.readlines()
+            assert lines == list(gen_lines())[1:] + list(gen_lines())[1:]
+
+
+    def test_read_text(self):
+        tmp_f = "/tmp/bramin_test.2.txt"
+        with open(tmp_f, 'w') as f:
+            for i in range(10, 0, -1):
+                f.write(str(i)+"\n")
+        to_int = c(map, lambda l: int(l.strip()))
+        grep_odd = c(filter, lambda i: i%2==0)
+        ans = tmp_f >> P | to_int | grep_odd | list | END
+        assert ans == list(grep_odd(range(10, 0, -1)))
+
