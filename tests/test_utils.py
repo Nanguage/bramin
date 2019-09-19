@@ -1,5 +1,7 @@
-import pytest
+import sys; sys.path.insert(0, '.')
 from bramin._utils import *
+
+import pytest
 
 @pytest.fixture
 def sms():

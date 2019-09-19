@@ -75,6 +75,11 @@ class MetaPipe(type):
 
 
 class Pipe(CallChain, metaclass=MetaPipe):
+
+    @property
+    def last(self) -> Callable:
+        return self._chain[-1]
+
     def __or__(self, right:Union[Callable, END]):
         if right is END:
             return self.__call__(self._input)

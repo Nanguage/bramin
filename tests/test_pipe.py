@@ -1,3 +1,6 @@
+import sys; sys.path.insert(0, '.')
+from bramin import *
+
 import pytest
 
 import toolz
@@ -6,8 +9,6 @@ from functools import reduce
 import operator
 from operator import add
 
-import sys; sys.path.insert(0, '.')
-from bramin import *
 
 inc = c(map, lambda x: x + 1)
 

@@ -19,6 +19,19 @@ class FileType(object):
 class callable_file(object):
     """Represent file as a callable object.
     Open file automatically according to it's filename.
+
+    Example write:
+    >>> fw = callable_file("/tmp/bramin_test.txt", "w")
+    >>> fw(["123", "456"])  # write file with a function call
+    '/tmp/bramin_test.txt'
+    >>> with open("/tmp/bramin_test.txt", 'r') as f:
+    ...     f.read()
+    '123456'
+
+    Example read:
+    >>> fr = callable_file("/tmp/bramin_test.txt")
+    >>> list(fr())  # read file with a function call
+    ['123456']
     """
 
     file_types: List[FileType] = []
