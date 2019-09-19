@@ -6,6 +6,8 @@ from threading import Thread
 import types
 import io
 
+from ._utils import type_error
+
 Popen_ = partial(Popen, shell=True)
 
 
@@ -38,7 +40,7 @@ class subp(object):
             if elm_tp is bytes:
                 self.text_mode = False
             elif elm_tp is not str:
-                raise self._subp_tp_err(elm_tp, True)
+                raise self._subp_tp_err(Iterable[elm_tp])
             p = Popen_(cmd, stdin=PIPE, stdout=PIPE)
             # write the stdin using another thread, for non-blocking IO
             stdin = self._fh_wrapper(p.stdin)
@@ -74,12 +76,11 @@ class subp(object):
         else:
             return fh
 
-    @staticmethod
-    def _subp_tp_err(tp, is_iterable=False):
-        _msg = "subp input_ expect " +\
-              "None/str/bytes/Iterable[str]/Iterable[byte], got" +\
-              (f"{tp}" if not is_iterable else f"Iterable[{tp}]")
-        return TypeError(_msg)
+    @classmethod
+    def _subp_tp_err(cls, tp):
+        return type_error(f"{cls}.__call__",
+                          Union[None, str, bytes, Iterable[str], Iterable[bytes]],
+                          tp)
 
     def _get_elm_type(self, iter_:Iterable) -> Tuple[Iterable, type]:
         """Guess the element type of a iterable obj,

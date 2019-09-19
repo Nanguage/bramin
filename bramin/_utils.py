@@ -165,3 +165,8 @@ class Singleton(type):
             return self._instance
         else:
             return self._instance
+
+
+def type_error(func_name, expect_tp, got_tp) -> TypeError:
+    msg = f"{func_name} expect type {expect_tp}, got {got_tp}."
+    return TypeError(msg)
