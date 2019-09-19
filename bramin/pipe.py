@@ -8,12 +8,13 @@ import operator
 
 from ._utils import (
     SpecialMethods,
-    is_partial_like, replace_partial_args, format_partial
+    is_partial_like, replace_partial_args, format_partial,
+    Singleton
 )
 from .io import callable_file
 
 
-class END(object): pass
+class END: pass
 
 
 FuncList = List[Callable]
@@ -33,7 +34,7 @@ class CallChain(object):
         self._chain = invoke_chain if invoke_chain is not None else []
         self._input = _input
 
-    def __call__(self, _input):
+    def __call__(self, _input=None):
         if len(self._chain) <= 0:
             raise ValueError("There are at least one callable in invoke_chain.")
         self._input = _input

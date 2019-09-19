@@ -11,7 +11,8 @@ Work In Progress.
 + [x] Piping(composing) functions.
 + [x] Placeholder.
 + [x] Unix like output redirection.
-+ [ ] Subprocess communication.
++ [x] Subprocess communication.
++ [ ] Automatic currying.
 + [ ] Branching and merging.
 + [ ] Parallel execution of branches.
 
@@ -20,3 +21,13 @@ Work In Progress.
 See more:
 
 + [example.ipynb](./example.ipynb)
+
+## Development
+
+### Test
+
+Run `pytest` in project directory:
+
+```bash
+bramin$ pytest --doctest-modules -s
+```

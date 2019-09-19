@@ -33,12 +33,12 @@ class subp(object):
         if input_ is None:
             p = Popen_(cmd, stdout=PIPE)
             stdout = self._fh_wrapper(p.stdout)
-        elif isinstance(input_, Iterable):
+        elif isinstance(input_, Iterable) and (not isinstance(input_, (str, bytes))):
             input_, elm_tp = self._get_elm_type(input_)
             if elm_tp is bytes:
                 self.text_mode = False
             elif elm_tp is not str:
-                raise self._subp_tp_err(l, g=True)
+                raise self._subp_tp_err(elm_tp, True)
             p = Popen_(cmd, stdin=PIPE, stdout=PIPE)
             # write the stdin using another thread, for non-blocking IO
             stdin = self._fh_wrapper(p.stdin)
@@ -59,7 +59,7 @@ class subp(object):
             _o, _ = p.communicate(input=input_)
             stdout = io.BytesIO(_o)
         else:
-            raise self._subp_tp_err(_input)
+            raise self._subp_tp_err(type(input_))
 
         for line in stdout:
             yield line
@@ -75,10 +75,10 @@ class subp(object):
             return fh
 
     @staticmethod
-    def _subp_tp_err(obj, is_iterable=False):
+    def _subp_tp_err(tp, is_iterable=False):
         _msg = "subp input_ expect " +\
               "None/str/bytes/Iterable[str]/Iterable[byte], got" +\
-              (f"{type(obj)}" if not is_iterable else f"Iterable[{type(obj)}]")
+              (f"{tp}" if not is_iterable else f"Iterable[{tp}]")
         return TypeError(_msg)
 
     def _get_elm_type(self, iter_:Iterable) -> Tuple[Iterable, type]:

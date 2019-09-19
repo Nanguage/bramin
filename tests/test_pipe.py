@@ -1,5 +1,6 @@
 import sys; sys.path.insert(0, '.')
 from bramin import *
+from bramin.subp import subp
 
 import pytest
 
@@ -11,6 +12,11 @@ from operator import add
 
 
 inc = c(map, lambda x: x + 1)
+
+
+@pytest.fixture
+def tmp_f():
+    return "/tmp/bramin_test.txt"
 
 
 class TestPipe(object):
@@ -81,13 +87,11 @@ class TestPipe(object):
         pipe = P | _x_[_x_ > np.pi]
         assert pipe(b).min() > np.pi
 
-
-    def test_write_text(self):
+    def test_write_text(self, tmp_f):
         def gen_lines():
             for i in range(10):
                 yield str(i)*i + "\n"
-        tmp_f = "/tmp/bramin_test.1.txt"
-        (gen_lines() | P | c(filter, lambda l: len(l.strip()) > 0) > tmp_f) | END
+        gen_lines() | P | c(filter, lambda l: len(l.strip()) > 0) > tmp_f | END
         with open(tmp_f) as f:
             lines = f.readlines()
             assert lines == list(gen_lines())[1:]
@@ -96,9 +100,7 @@ class TestPipe(object):
             lines = f.readlines()
             assert lines == list(gen_lines())[1:] + list(gen_lines())[1:]
 
-
-    def test_read_text(self):
-        tmp_f = "/tmp/bramin_test.2.txt"
+    def test_read_text(self, tmp_f):
         with open(tmp_f, 'w') as f:
             for i in range(10, 0, -1):
                 f.write(str(i)+"\n")
@@ -107,3 +109,24 @@ class TestPipe(object):
         ans = tmp_f >> P | to_int | grep_odd | list | END
         assert ans == list(grep_odd(range(10, 0, -1)))
 
+    def test_source_subp(self, tmp_f):
+        with open(tmp_f, 'w') as f:
+            for i in range(11):
+                f.write(str(i)+"\n")
+        filter_1 = c(filter, lambda l: "1" in l)
+        pipe = P | subp(f"cat {tmp_f}") | filter_1 | list
+        assert pipe() == ["1\n", "10\n"]
+
+    def test_mid_subp(self):
+        def gen_lines(n):
+            for i in range(n):
+                yield str(i) + "\n"
+        pipe = P | gen_lines | subp("grep 1") | list
+        assert pipe(11) == ["1\n", "10\n"]
+
+    def test_compose_subp(self, tmp_f):
+        with open(tmp_f, 'w') as f:
+            for i in range(111111):
+                f.write(str(i)+"\n")
+        pipe = P | subp(f"cat {tmp_f}") | subp("grep 1") | list
+        assert pipe()[:2] == ["1\n", "10\n"]

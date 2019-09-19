@@ -152,3 +152,16 @@ def format_partial(func:Callable, verbose:bool=False) -> str:
     else:
         repr_ = f"<partial {fname}>"
     return repr_
+
+
+class Singleton(type):
+    def __init__(self, *args, **kwargs):
+        self._instance = None
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, *args, **kwargs):
+        if self._instance is None:
+            self._instance = super().__call__(*args, **kwargs)
+            return self._instance
+        else:
+            return self._instance

@@ -29,3 +29,13 @@ class TestSubp(object):
         p = subp(f"cat {tmp_f}")
         assert list(p()) == ['123']
 
+    def test_input_str(self):
+        p = subp("grep 1")
+        c = "1\n2\n11\n"
+        assert list(p(c)) == ["1\n", "11\n"]
+
+    def test_input_bytes(self):
+        p = subp("grep 1")
+        c = b"1\n2\n11\n"
+        assert list(p(c)) == [b"1\n", b"11\n"]
+
