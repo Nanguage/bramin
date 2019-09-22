@@ -1,10 +1,17 @@
 from typing import Optional, Iterable, Callable, Any
+import typing as t
 from itertools import chain, repeat
 import operator
 import builtins
+from functools import wraps, partial
+import inspect
+import types
+
 
 class SpecialMethods(object):
-    # see https://docs.python.org/3/reference/datamodel.html#special-method-names
+    """Traversal object's special methods.
+    see: https://docs.python.org/3/reference/datamodel.html#special-method-names
+    """
     groups = {
         'basic': {
             'initial': ['new', 'init'],
@@ -155,6 +162,7 @@ def format_partial(func:Callable, verbose:bool=False) -> str:
 
 
 class Singleton(type):
+    """Let class has only one instance."""
     def __init__(self, *args, **kwargs):
         self._instance = None
         super().__init__(*args, **kwargs)
@@ -167,6 +175,120 @@ class Singleton(type):
             return self._instance
 
 
-def type_error(func_name, expect_tp, got_tp) -> TypeError:
-    msg = f"{func_name} expect type {expect_tp}, got {got_tp}."
+def type_error(func_name, expect_tp, got_tp,
+               arg_name=None, ret=False) -> TypeError:
+    """format type error message."""
+    msg = func_name
+    if ret:
+        msg += f"'s return"
+    elif arg_name:
+        msg += f"'s parameter '{arg_name}'"
+    msg += f" expect type {expect_tp}, got {got_tp}."
     return TypeError(msg)
+
+
+class type_guard(object):
+    """Decorator for check func's input and output type,
+    when it's invoked.
+    Expected type is specified by it's annotation.
+    
+    Support a part of typing types:
+        Any, Optional, Union, Callable
+        (note: not support nested typing types now. like: Optional[Callable])
+    """
+
+    def __new__(cls, func=None, **kwargs):
+        if func is None:
+            return partial(cls, **kwargs)
+        else:
+            return super().__new__(cls)
+
+    def __init__(self, func=None, *, check_ret=True):
+        wraps(func)(self)
+        self.func = func
+        self.check_ret = check_ret
+        self.sig = inspect.signature(func)
+        self._func_name = get_callable_name(func)
+        self._input_checkers = {}
+        self._output_checker = None
+        self._dispatch_checkers()
+
+    def __call__(self, *args, **kwargs):
+        self._check_input_args(*args, **kwargs)
+        res = self.func(*args, **kwargs)
+        self._check_output(res)
+        return res
+
+    def _check_input_args(self, *args, **kwargs):
+        bound_values = self.sig.bind(*args, **kwargs)
+        for name, value in bound_values.arguments.items():
+            if name not in self._input_checkers: continue
+            checker = self._input_checkers[name]
+            expect_tp = self.sig.parameters[name].annotation
+            checker(value)
+            if not checker(value):
+                raise type_error(self._func_name, expect_tp, type(value), name)
+
+    def _check_output(self, res):
+        expect_tp = self.sig.return_annotation
+        if self.check_ret and self._output_checker:
+            if not self._output_checker(res):
+                raise type_error(self._func_name, expect_tp, type(res), ret=True)
+
+    def _dispatch_checkers(self):
+        sig = self.sig
+        for name, p in sig.parameters.items():
+            expect_tp = p.annotation
+            if expect_tp is inspect._empty: continue
+            self._input_checkers[name] = self._get_checker(expect_tp)
+        if sig.return_annotation is not inspect._empty:
+            self._output_checker = self._get_checker(sig.return_annotation)
+
+    def _get_checker(self, expect_tp):
+        if expect_tp is t.Any:
+            return lambda v: True
+        # about type determination of typing objs
+        # see: https://github.com/python/typing/issues/528
+        elif type(expect_tp) is type(t.Union):
+            return lambda v: isinstance(v, expect_tp.__args__)
+        elif type(expect_tp) is type(t.Callable):
+            return lambda v: callable(v)
+        elif isinstance(expect_tp, str):
+            return self._get_str_checker(expect_tp)
+        else:
+            return lambda v: isinstance(v, expect_tp)
+
+    @classmethod
+    def _get_str_checker(cls, expect_tp):
+        """
+        annotation with string, it's the
+        case of annotation in the class with it self. like:
+          class A:
+              def mth1(self, other:"A"): ...
+        """
+        def checker(v):
+            caller_f = inspect.currentframe().f_back.f_back
+            args = caller_f.f_locals['args']
+            if (not args) or (expect_tp != type(args[0]).__name__):
+                raise TypeError("string annotation can only be used "
+                                "for annotate class it self.")
+            tp = type(args[0])
+            return isinstance(v, tp)
+        return checker
+
+    def __get__(self, instance, cls):
+        if instance is None:
+            return self
+        else:
+            return types.MethodType(self, instance)
+
+
+def get_callable_name(func:Callable) -> str:
+    if hasattr(func, '__qualname__'):
+        name = func.__qualname__
+    elif hasattr(func, '__name__'):
+        name = func.__name__
+    else:
+        name = get_callable_name(type(func).__call__)
+    return name
+

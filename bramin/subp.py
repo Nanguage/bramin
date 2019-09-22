@@ -6,7 +6,7 @@ from threading import Thread
 import types
 import io
 
-from ._utils import type_error
+from ._utils import (type_error, type_guard)
 
 Popen_ = partial(Popen, shell=True)
 
@@ -20,11 +20,22 @@ class subp(object):
         self.cmd = cmd
         self.text_mode = True
 
+    @type_guard
     def __or__(self, right:'subp') -> 'subp':
         """Allow compose(concat) subp with '|'"""
-        if type(right) is not subp:
-            raise TypeError(f"subp's __or__ expect type subp, got {type(right)}")
         cmd = self.cmd + " | " + right.cmd
+        return subp(cmd)
+
+    @type_guard
+    def __gt__(self, right:str) -> 'subp':
+        """Allow redirect output to file."""
+        cmd = self.cmd + " > " + right
+        return subp(cmd)
+
+    @type_guard
+    def __rshift__(self, right:str) -> 'subp':
+        """Allow redirect in append mode."""
+        cmd = self.cmd + " >> " + right
         return subp(cmd)
 
     def __call__(self, input_:Optional[ProcessInput]=None) -> Iterable[ByteOrStr]:

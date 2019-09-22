@@ -9,9 +9,10 @@ import operator
 from ._utils import (
     SpecialMethods,
     is_partial_like, replace_partial_args, format_partial,
-    type_error, Singleton
+    Singleton, type_error, type_guard
 )
 from .io import callable_file
+from .subp import subp
 
 
 class EndMarker(metaclass=Singleton):
@@ -63,9 +64,8 @@ class CallChain(object):
     def _process(self, func:Callable, old:Any) -> Any:
         return func(old)
 
+    @type_guard
     def _append(self, func:Callable):
-        if not callable(func):
-            raise type_error(f"{type(self)}._append", callable, type(func))
         self._chain.append(func)
 
 
@@ -117,13 +117,13 @@ class Pipe(CallChain, metaclass=MetaPipe):
         else:
             raise type_error(f"{type(self)}.__or__", Union[EndMarker, callable], type(right))
 
+    @type_guard
     def __rshift__(self, right:str) -> "Pipe":
-        if not isinstance(right, str):
-            raise type_error(f"{type(self)}.__rshift__", str, type(tight))
         chain_ = self._chain + [callable_file(right, 'a')]
         p = type(self)(chain_, self._input)
         return p
 
+    @type_guard
     def __gt__(self, right:Union[str, EndMarker]):
         if right is END:  # case:   ... | func > "filename" | END
             a = END.attach
@@ -134,8 +134,6 @@ class Pipe(CallChain, metaclass=MetaPipe):
             p = type(self)(self._chain + [callable_file(a, 'w')], self._input)
             return p(p._input)
         else:
-            if not isinstance(right, str):
-                raise type_error(f"{type(self)}.__gt__", str, type(right))
             p = type(self)(self._chain + [callable_file(right, 'w')], self._input)
             return p
 
