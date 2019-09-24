@@ -95,15 +95,22 @@ class MetaPipe(type):
 class Pipe(CallChain, metaclass=MetaPipe):
 
     @property
-    def last(self) -> Callable:
-        return self._chain[-1]
+    def last(self) -> Optional[Callable]:
+        if self._chain:
+            return self._chain[-1]
+        else:
+            return None
 
     def __or__(self, right:Union[Callable, EndMarker]):
-        if right is END:
-            return self.__call__(self._input)
-        elif right is placeholder:
+        if right is placeholder:
             ph = placeholder([lambda x:x])  # add an identity func
             chain_ = self._chain + [ph]
+            p = type(self)(chain_, self._input)
+            return p
+        elif isinstance(right, subp) and isinstance(self.last, subp):
+            # concat two subp obj
+            chain_ = self._chain[:-1]
+            chain_.append(self.last | right)
             p = type(self)(chain_, self._input)
             return p
         elif isinstance(right, Pipe):  # concat two Pipe obj
@@ -114,6 +121,8 @@ class Pipe(CallChain, metaclass=MetaPipe):
             chain_ = self._chain + [right]
             p = type(self)(chain_, self._input)
             return p
+        elif right is END:
+            return self.__call__(self._input)
         else:
             raise type_error(f"{type(self)}.__or__", Union[EndMarker, callable], type(right))
 

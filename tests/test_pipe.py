@@ -129,4 +129,5 @@ class TestPipe(object):
             for i in range(111111):
                 f.write(str(i)+"\n")
         pipe = P | subp(f"cat {tmp_f}") | subp("grep 1") | list
+        assert pipe._chain[0].cmd == f"cat {tmp_f} | grep 1"
         assert pipe()[:2] == ["1\n", "10\n"]
