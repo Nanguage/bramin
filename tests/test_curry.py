@@ -12,3 +12,9 @@ class TestCurry(object):
         assert f_(x=1)(2)(3) == (1, 2, 3)
         assert f_(x=1, y=2)(3) == (1, 2, 3)
         assert f_(x=1, z=3)(2) == (1, 2, 3)
+
+    def test_with_default(self):
+        def f(x, y, z=1):
+            return (x, y, z)
+        f_ = curry(f)
+        assert f_(1)(2, 3) == (1, 2, 3)

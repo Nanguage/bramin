@@ -10,6 +10,15 @@ from ._utils import (
 
 
 class curry(object):
+    """
+    Basically it's same to toolz.curry,
+    but the argument binding behavior like this is allowed:
+
+    >>> def add(x, y):
+    ...     return x + y
+    >>> curry(add)(x=1)(1)
+    2
+    """
 
     def __init__(self, func:Callable, *args, **kwargs):
         if not callable(func):
@@ -30,7 +39,6 @@ class curry(object):
         self._bind(*args, **kwargs)
 
         update_wrapper(self, ori_func)
-        self._is_all_bound = False
 
     def _bind(self, *args, **kwargs):
         self._update_binding(self._bindings, args, kwargs)
@@ -40,8 +48,7 @@ class curry(object):
         pars = self._params
         for val in args:
             for name, p in pars:
-                if p.default is not _empty: break
-                if bids[name] is _empty:
+                if bids[name] is _empty or p.default is not _empty:
                     bids[name] = val
                     break
         for name, val in kwargs.items():
@@ -49,12 +56,7 @@ class curry(object):
 
     @property
     def all_bound(self) -> bool:
-        if self._is_all_bound:
-            return True
-        else:
-            res = all([p is not _empty for _, p in self._bindings.items()])
-            self._is_all_bound = res
-            return res
+        return all([p is not _empty for _, p in self._bindings.items()])
 
     @property
     def args(self) -> tuple:
@@ -74,15 +76,12 @@ class curry(object):
         return kwargs
 
     def __call__(self, *args, **kwargs):
-        try:
-            return self.func(*self.args, **self.keywords)
-        except TypeError as e:
-            if self.all_bound: raise
-            new = type(self)(self, *args, **kwargs)
-            if new.all_bound:
-                return new(*new.args, **new.keywords)
-            else:
-                return new
+        # this call has big overhead, need to improve
+        new = type(self)(self, *args, **kwargs)
+        if new.all_bound:
+            return new.func(*new.args, **new.keywords)
+        else:
+            return new
 
     def __repr__(self):
         bound = {
