@@ -11,6 +11,8 @@ from ._utils import (
 
 class curry(object):
     """
+    [Deprecated] built-in and *args func are not supported.
+
     Basically it's same to toolz.curry,
     but the argument binding behavior like this is allowed:
 

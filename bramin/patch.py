@@ -1,4 +1,5 @@
-from functools import wraps
+import typing as t
+from functools import wraps, partial
 
 
 def patch_op(obj, op):
@@ -14,12 +15,9 @@ def patch_op(obj, op):
     return obj
 
 
-def patch(obj):
-    """substitute __or__ method, for use 'obj | P | func' synatax"""
-    patch_op(obj, '__or__')
-
-
 def patch_all():
+    """substitute __or__ method, for use 'obj | P | func' synatax"""
+    patch = partial(patch_op, '__or__')
     # patch pandas
     try:
         import pandas as pd
