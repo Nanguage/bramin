@@ -7,6 +7,8 @@ from functools import wraps, partial
 import inspect
 import types
 
+import typing_inspect as ti
+
 
 class SpecialMethods(object):
     """Traversal object's special methods.
@@ -249,9 +251,9 @@ class type_guard(object):
             return lambda v: True
         # about type determination of typing objs
         # see: https://github.com/python/typing/issues/528
-        elif type(expect_tp) is type(t.Union):
+        elif ti.is_union_type(expect_tp):
             return lambda v: isinstance(v, expect_tp.__args__)
-        elif type(expect_tp) is type(t.Callable):
+        elif ti.is_callable_type(expect_tp):
             return lambda v: callable(v)
         elif isinstance(expect_tp, str):
             return self._get_str_checker(expect_tp)

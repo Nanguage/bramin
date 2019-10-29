@@ -17,7 +17,7 @@ def patch_op(obj, op):
 
 def patch_all():
     """substitute __or__ method, for use 'obj | P | func' synatax"""
-    patch = partial(patch_op, '__or__')
+    patch = partial(patch_op, op='__or__')
     # patch pandas
     try:
         import pandas as pd
