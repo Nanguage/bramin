@@ -1,4 +1,6 @@
-import sys; sys.path.insert(0, '.')
+import sys
+sys.path.insert(0, '.')
+
 from bramin.subp import subp
 
 
@@ -38,4 +40,3 @@ class TestSubp(object):
         p = subp("grep 1")
         c = b"1\n2\n11\n"
         assert list(p(c)) == [b"1\n", b"11\n"]
-

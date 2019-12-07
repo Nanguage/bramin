@@ -1,14 +1,16 @@
+import io
+import gzip
 from typing import Callable, List, Iterable, Optional
 from collections import namedtuple
 import inspect
 
 
 class FileType(object):
-    def __init__(self, name:str,
-                 matcher:Callable[[str], bool],
-                 opener:Callable,
-                 reader:Callable,
-                 writer:Callable):
+    def __init__(self, name: str,
+                 matcher: Callable[[str], bool],
+                 opener: Callable,
+                 reader: Callable,
+                 writer: Callable):
         self.name = name
         self.matcher = matcher
         self.opener = opener
@@ -36,16 +38,17 @@ class callable_file(object):
 
     file_types: List[FileType] = []
 
-    def __init__(self, fname:str, *args, **kwargs):
+    def __init__(self, fname: str, *args, **kwargs):
         for ftype in reversed(self.file_types):
             if ftype.matcher(fname):
                 self._args = (fname, args, kwargs)
                 self._ftype = ftype
                 break
         else:
-            raise IOError(f"Could not found any registered file type match {fname}")
+            raise IOError(
+                f"Could not found any registered file type match {fname}")
 
-    def __call__(self, contents:Optional[Iterable]=None):
+    def __call__(self, contents: Optional[Iterable] = None):
         fname, args, kwargs = self._args
         mode = self._get_mode(self._ftype.opener, args, kwargs)
         if len(args) > 0:
@@ -77,12 +80,12 @@ class callable_file(object):
         fh.close()
 
     @classmethod
-    def register(cls, file_type:FileType):
+    def register(cls, file_type: FileType):
         """Register a filetype"""
         cls.file_types.append(file_type)
 
     @classmethod
-    def unregister(clf, name:str):
+    def unregister(clf, name: str):
         """Register a filetype"""
         for idx in range(len(clf.file_types)-1, -1, -1):
             tp = clf.file_types[idx]
@@ -92,8 +95,9 @@ class callable_file(object):
 
 
 def _write_text(fh, lines):
-    for l in lines: 
+    for l in lines:
         fh.write(l)
+
 
 text_file = FileType(
     "text",
@@ -106,9 +110,6 @@ text_file = FileType(
 
 callable_file.register(text_file)
 
-
-import gzip
-import io
 
 gzipped_text = FileType(
     "gzipped_text",

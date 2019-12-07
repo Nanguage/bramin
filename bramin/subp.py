@@ -16,29 +16,29 @@ ProcessInput = Union[Iterable[ByteOrStr], ByteOrStr]
 
 
 class subp(object):
-    def __init__(self, cmd:str):
+    def __init__(self, cmd: str):
         self.cmd = cmd
         self.text_mode = True
 
     @type_guard
-    def __or__(self, right:'subp') -> 'subp':
+    def __or__(self, right: 'subp') -> 'subp':
         """Allow compose(concat) subp with '|'"""
         cmd = self.cmd + " | " + right.cmd
         return subp(cmd)
 
     @type_guard
-    def __gt__(self, right:str) -> 'subp':
+    def __gt__(self, right: str) -> 'subp':
         """Allow redirect output to file."""
         cmd = self.cmd + " > " + right
         return subp(cmd)
 
     @type_guard
-    def __rshift__(self, right:str) -> 'subp':
+    def __rshift__(self, right: str) -> 'subp':
         """Allow redirect in append mode."""
         cmd = self.cmd + " >> " + right
         return subp(cmd)
 
-    def __call__(self, input_:Optional[ProcessInput]=None) -> Iterable[ByteOrStr]:
+    def __call__(self, input_: Optional[ProcessInput] = None) -> Iterable[ByteOrStr]:
         cmd = self.cmd
         t = None
 
@@ -55,6 +55,7 @@ class subp(object):
             p = Popen_(cmd, stdin=PIPE, stdout=PIPE)
             # write the stdin using another thread, for non-blocking IO
             stdin = self._fh_wrapper(p.stdin)
+
             def write_to_stdin(p):
                 for line in input_:
                     stdin.write(line)
@@ -77,7 +78,8 @@ class subp(object):
         for line in stdout:
             yield line
 
-        if t: t.join()
+        if t:
+            t.join()
         p.terminate()
 
     def _fh_wrapper(self, fh):
@@ -90,10 +92,11 @@ class subp(object):
     @classmethod
     def _subp_tp_err(cls, tp):
         return type_error(f"{cls}.__call__",
-                          Union[None, str, bytes, Iterable[str], Iterable[bytes]],
+                          Union[None, str, bytes,
+                                Iterable[str], Iterable[bytes]],
                           tp)
 
-    def _get_elm_type(self, iter_:Iterable) -> Tuple[Iterable, type]:
+    def _get_elm_type(self, iter_: Iterable) -> Tuple[Iterable, type]:
         """Guess the element type of a iterable obj,
         also return a not iterated copy."""
         iter_, _iter = tee(iter_)
@@ -105,4 +108,3 @@ class subp(object):
 
     def __repr__(self) -> str:
         return f"subp('{self.cmd}')"
-

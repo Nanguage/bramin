@@ -1,14 +1,16 @@
-import sys; sys.path.insert(0, '.')
-from bramin.io import *
+import sys
+sys.path.insert(0, '.')
+import io
+import gzip
 
 import pytest
 
-import io
-import gzip
+from bramin.io import *
 
 
 tmp_text = "/tmp/bramin_test.txt"
 tmp_gz_text = "/tmp/bramin_test.txt.gz"
+
 
 @pytest.fixture
 def lines():

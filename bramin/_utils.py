@@ -28,25 +28,25 @@ class SpecialMethods(object):
             'other':      ['slots'],
         },
 
-        'class_creation': [ 'init_subclass', 'mro_entries', 'prepare' ],
-        'check': [ 'instancecheck', 'subclasscheck' ],
+        'class_creation': ['init_subclass', 'mro_entries', 'prepare'],
+        'check': ['instancecheck', 'subclasscheck'],
 
-        'generic_types': [ 'class_getitem' ],
-        'callable': [ 'call' ],
+        'generic_types': ['class_getitem'],
+        'callable': ['call'],
 
-        'container': [ 'len', 'length_hint',
-                       'getitem', 'setitem', 'delitem', 'missing',
-                       'iter', 'reversed', 'contains' ],
+        'container': ['len', 'length_hint',
+                      'getitem', 'setitem', 'delitem', 'missing',
+                      'iter', 'reversed', 'contains'],
 
         'numeric': {
 
-            'left': [ 'add', 'sub', 'mul', 'matmul',
-                      'truediv', 'floordiv', 'mod', 'divmod',
-                      'pow', 'lshifh', 'rshift',
-                      'and', 'xor', 'or' ],
-            
-            'other': [ 'neg', 'pos', 'abs', 'invert', 'index',
-                       'round', 'trunc', 'floor', 'ceil', ],
+            'left': ['add', 'sub', 'mul', 'matmul',
+                     'truediv', 'floordiv', 'mod', 'divmod',
+                     'pow', 'lshifh', 'rshift',
+                     'and', 'xor', 'or'],
+
+            'other': ['neg', 'pos', 'abs', 'invert', 'index',
+                      'round', 'trunc', 'floor', 'ceil', ],
 
         },
 
@@ -55,14 +55,14 @@ class SpecialMethods(object):
 
     }
 
-    groups['numeric']['right']  = [ 'r'+op for op in groups['numeric']['left'] ]
-    groups['numeric']['assign'] = [ 'i'+op for op in groups['numeric']['left'] ]
+    groups['numeric']['right'] = ['r'+op for op in groups['numeric']['left']]
+    groups['numeric']['assign'] = ['i'+op for op in groups['numeric']['left']]
 
-    def __init__(self, types:Optional[Iterable[str]]=None,
-                       filter_func:Optional[Callable[[str, str], bool]]=None,
-                       with_underline:bool=False,
-                       with_impl:bool=False,
-                       grp_sep:str='/'):
+    def __init__(self, types: Optional[Iterable[str]] = None,
+                 filter_func: Optional[Callable[[str, str], bool]] = None,
+                 with_underline: bool = False,
+                 with_impl: bool = False,
+                 grp_sep: str = '/'):
         self.types = types if types else self._inner_grp_names()
         self.filter_func = filter_func
         self.with_underline = with_underline
@@ -78,7 +78,7 @@ class SpecialMethods(object):
             else:
                 yield from self._inner_grp_names(v, prefix+sep+k)
 
-    def __getitem__(self, key:str, grp=None) -> Iterable[str]:
+    def __getitem__(self, key: str, grp=None) -> Iterable[str]:
         grp = self.groups if grp is None else grp
         sep = self.grp_sep
         key = key.lstrip(sep)
@@ -91,7 +91,7 @@ class SpecialMethods(object):
                 raise KeyError(f'{key} is not a valid group name.')
             return names
 
-    def _get_impl(self, name:str) -> Optional[Callable]:
+    def _get_impl(self, name: str) -> Optional[Callable]:
         """Get the corresponding function with same semantic to the special method"""
         if name in dir(operator):
             impl = getattr(operator, name)
@@ -104,8 +104,10 @@ class SpecialMethods(object):
         return impl
 
     def __iter__(self):
-        names_and_tps = chain(*[zip(self[tp], repeat(tp)) for tp in self.types])
-        f_ = None if (self.filter_func is None) else (lambda t: self.filter_func(*t))
+        names_and_tps = chain(*[zip(self[tp], repeat(tp))
+                                for tp in self.types])
+        f_ = None if (self.filter_func is None) else (
+            lambda t: self.filter_func(*t))
         names_and_tps = filter(f_, names_and_tps)
         for name, tp in names_and_tps:
             name = f"__{name}__" if self.with_underline else name
@@ -116,7 +118,7 @@ class SpecialMethods(object):
                 yield name, tp
 
 
-def reverse_args(func:Callable) -> Callable:
+def reverse_args(func: Callable) -> Callable:
     """reverse func's args"""
     def wrapper(*args):
         return func(*args[::-1])
@@ -124,7 +126,7 @@ def reverse_args(func:Callable) -> Callable:
     return wrapper
 
 
-def is_partial_like(func:Callable):
+def is_partial_like(func: Callable):
     """toolz.curry or functools.partial-like object?"""
     return (
         hasattr(func, 'func')
@@ -135,27 +137,30 @@ def is_partial_like(func:Callable):
 
 
 def replace_partial_args(
-        func:Callable, target:Any, repl:Any,
-        match_func:Optional[Callable]=None,
-        replace_func:Optional[Callable]=None,
-    ) -> Callable:
+    func: Callable, target: Any, repl: Any,
+    match_func: Optional[Callable] = None,
+    replace_func: Optional[Callable] = None,
+) -> Callable:
     """Replace partial-like object's argument,
     return a new callable"""
     if match_func is None:
-        match_func = lambda i, v, t: v is t
+        def match_func(i, v, t): return v is t
     if replace_func is None:
-        replace_func = lambda v, r: r
-    args   = [  (replace_func(v, repl) if match_func(i, v, target) else v) for i, v in enumerate(func.args)]
-    kwargs = {k:(replace_func(v, repl) if match_func(k, v, target) else v) for k, v in func.keywords.items()}
+        def replace_func(v, r): return r
+    args = [(replace_func(v, repl) if match_func(i, v, target) else v)
+            for i, v in enumerate(func.args)]
+    kwargs = {k: (replace_func(v, repl) if match_func(k, v, target) else v)
+              for k, v in func.keywords.items()}
     new_func = type(func)(func.func, *args, **kwargs)
     return new_func
 
 
-def format_partial(func:Callable, verbose:bool=False) -> str:
+def format_partial(func: Callable, verbose: bool = False) -> str:
     """Format a partial-like object"""
     fname = func.__qualname__ if hasattr(func, '__qualname__') else str(func)
     arg_str = ", ".join([repr(a) for a in func.args])
-    kwargs_str = ", ".join([str(k)+":"+repr(v) for k,v in func.keywords.items()])
+    kwargs_str = ", ".join([str(k)+":"+repr(v)
+                            for k, v in func.keywords.items()])
     if verbose:
         repr_ = f"<partial {fname}:{arg_str} {kwargs_str}>"
     else:
@@ -165,6 +170,7 @@ def format_partial(func:Callable, verbose:bool=False) -> str:
 
 class Singleton(type):
     """Let class has only one instance."""
+
     def __init__(self, *args, **kwargs):
         self._instance = None
         super().__init__(*args, **kwargs)
@@ -193,7 +199,7 @@ class type_guard(object):
     """Decorator for check func's input and output type,
     when it's invoked.
     Expected type is specified by it's annotation.
-    
+
     Support a part of typing types:
         Any, Optional, Union, Callable
         (note: not support nested typing types now. like: Optional[Callable])
@@ -224,7 +230,8 @@ class type_guard(object):
     def _check_input_args(self, *args, **kwargs):
         bound_values = self.sig.bind(*args, **kwargs)
         for name, value in bound_values.arguments.items():
-            if name not in self._input_checkers: continue
+            if name not in self._input_checkers:
+                continue
             checker = self._input_checkers[name]
             expect_tp = self.sig.parameters[name].annotation
             checker(value)
@@ -235,13 +242,15 @@ class type_guard(object):
         expect_tp = self.sig.return_annotation
         if self.check_ret and self._output_checker:
             if not self._output_checker(res):
-                raise type_error(self._func_name, expect_tp, type(res), ret=True)
+                raise type_error(self._func_name, expect_tp,
+                                 type(res), ret=True)
 
     def _dispatch_checkers(self):
         sig = self.sig
         for name, p in sig.parameters.items():
             expect_tp = p.annotation
-            if expect_tp is inspect._empty: continue
+            if expect_tp is inspect._empty:
+                continue
             self._input_checkers[name] = self._get_checker(expect_tp)
         if sig.return_annotation is not inspect._empty:
             self._output_checker = self._get_checker(sig.return_annotation)
@@ -285,7 +294,7 @@ class type_guard(object):
             return types.MethodType(self, instance)
 
 
-def get_callable_name(func:Callable) -> str:
+def get_callable_name(func: Callable) -> str:
     if hasattr(func, '__qualname__'):
         name = func.__qualname__
     elif hasattr(func, '__name__'):
@@ -293,4 +302,3 @@ def get_callable_name(func:Callable) -> str:
     else:
         name = get_callable_name(type(func).__call__)
     return name
-

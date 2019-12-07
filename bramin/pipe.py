@@ -19,7 +19,7 @@ class EndMarker(metaclass=Singleton):
     def __init__(self, attach=None):
         self.attach = attach
 
-    def __ror__(self, left:str):
+    def __ror__(self, left: str):
         """Dealing with the problem caused by '|' operator's priority,
         when redirect the stream to a file, like:
 
@@ -34,7 +34,6 @@ class EndMarker(metaclass=Singleton):
 END = EndMarker()
 
 
-
 FuncList = List[Callable]
 
 
@@ -47,25 +46,27 @@ class CallChain(object):
     >>> add3(39)  # equivalent to add1(add1(add1(39)))
     42
     """
-    def __init__(self, invoke_chain:Optional[FuncList]=None,
-                       _input:Any=None ):
+
+    def __init__(self, invoke_chain: Optional[FuncList] = None,
+                 _input: Any = None):
         self._chain = invoke_chain if invoke_chain is not None else []
         self._input = _input
 
     def __call__(self, _input=None):
         if len(self._chain) <= 0:
-            raise ValueError("There are at least one callable in invoke_chain.")
+            raise ValueError(
+                "There are at least one callable in invoke_chain.")
         self._input = _input
         res = self._input
         for func in self._chain:
             res = self._process(func, res)
         return res
 
-    def _process(self, func:Callable, old:Any) -> Any:
+    def _process(self, func: Callable, old: Any) -> Any:
         return func(old)
 
     @type_guard
-    def _append(self, func:Callable):
+    def _append(self, func: Callable):
         self._chain.append(func)
 
 
@@ -73,6 +74,7 @@ class MetaPipe(type):
     """Control the behavior of pass object into pipe directly:
     obj | P | ... | END
     """
+
     def __or__(self, right):
         p = self()
         return p | right
@@ -101,7 +103,7 @@ class Pipe(CallChain, metaclass=MetaPipe):
         else:
             return None
 
-    def __or__(self, right:Union[Callable, EndMarker]):
+    def __or__(self, right: Union[Callable, EndMarker]):
         if right is placeholder:
             ph = placeholder([lambda x:x])  # add an identity func
             chain_ = self._chain + [ph]
@@ -124,16 +126,17 @@ class Pipe(CallChain, metaclass=MetaPipe):
         elif right is END:
             return self.__call__(self._input)
         else:
-            raise type_error(f"{type(self)}.__or__", Union[EndMarker, callable], type(right))
+            raise type_error(f"{type(self)}.__or__",
+                             Union[EndMarker, callable], type(right))
 
     @type_guard
-    def __rshift__(self, right:str) -> "Pipe":
+    def __rshift__(self, right: str) -> "Pipe":
         chain_ = self._chain + [callable_file(right, 'a')]
         p = type(self)(chain_, self._input)
         return p
 
     @type_guard
-    def __gt__(self, right:Union[str, EndMarker]):
+    def __gt__(self, right: Union[str, EndMarker]):
         if right is END:  # case:   ... | func > "filename" | END
             a = END.attach
             if a is None:
@@ -143,23 +146,25 @@ class Pipe(CallChain, metaclass=MetaPipe):
             p = type(self)(self._chain + [callable_file(a, 'w')], self._input)
             return p(p._input)
         else:
-            p = type(self)(self._chain + [callable_file(right, 'w')], self._input)
+            p = type(self)(self._chain +
+                           [callable_file(right, 'w')], self._input)
             return p
 
-    def _process(self, func:Callable, old:Any) -> Any:
+    def _process(self, func: Callable, old: Any) -> Any:
         if isinstance(func, placeholder):
             # placeholder object
             new = placeholder._eval(func, old)
         elif is_partial_like(func) and \
-             ( placeholder in set(func.args) or \
-               placeholder in set(func.keywords) ):
+            (placeholder in set(func.args) or
+             placeholder in set(func.keywords)):
             # placeholder in the partial-like parameters
             # because MetaPlaceHolder reloaded __eq__, shold convert args to set
             # replace placeholder to real pass-in
             func = replace_partial_args(func, placeholder, old)
             func = replace_partial_args(func, placeholder, old,
-                match_func   = lambda i, v, t: isinstance(v, t),
-                replace_func = lambda v, r: v(r))
+                                        match_func=lambda i, v, t: isinstance(
+                                            v, t),
+                                        replace_func=lambda v, r: v(r))
             new = func()
         else:
             new = func(old)
@@ -186,6 +191,7 @@ class MetaPlaceHolder(type):
     def __init__(ph, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # add mimic special method to placeholder obj
+
         def make_mths(ph, op, tp, impl):
             def _mimic(self, *args, **kwargs):
                 f = partial(impl, ph, *args, **kwargs)
@@ -243,19 +249,21 @@ class placeholder(CallChain, metaclass=MetaPlaceHolder):
     def __repr__(self) -> str:
         return f'<ph at {hex(id(self))}>'
 
-    def _process(self, func:Callable, old:Any) -> Any:
+    def _process(self, func: Callable, old: Any) -> Any:
         if is_partial_like(func):
             # replace placeholder to real pass-in
             func = replace_partial_args(func, placeholder, old,
-                match_func = lambda i, v, t: (i == 0) and v is t)
+                                        match_func=lambda i, v, t: (i == 0) and v is t)
             func = replace_partial_args(func, placeholder, self._input,
-                match_func = lambda i, v, t: (i >  0) and v is t)
+                                        match_func=lambda i, v, t: (i > 0) and v is t)
             if func.func is operator.getitem:
                 def _replace(v, r):
                     return v(r) if len(v._chain) > 0 else old
-                func = replace_partial_args(func, placeholder, old,
-                    match_func   = lambda i, v, t: isinstance(v, t),
-                    replace_func = _replace)
+                func = replace_partial_args(
+                    func, placeholder, old,
+                    match_func=lambda i, v, t: isinstance(v, t),
+                    replace_func=_replace
+                )
             new = func()
         else:
             new = func(old)

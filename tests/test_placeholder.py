@@ -1,7 +1,8 @@
-import sys; sys.path.insert(0, '.')
-from bramin.pipe import placeholder
-
+import sys
+sys.path.insert(0, '.')
 import operator
+
+from bramin.pipe import placeholder
 
 
 class TestPlaceHolder(object):
@@ -28,7 +29,7 @@ class TestPlaceHolder(object):
     def test_instance_container_ops(self):
         ph = placeholder()
         ph[1]
-        assert ph([1,2,3]) == 2
+        assert ph([1, 2, 3]) == 2
         ph = placeholder()
         ph[1] = 'a'
         l = [1, 2, 3]
@@ -36,7 +37,7 @@ class TestPlaceHolder(object):
         assert l[1] == 'a'
         #ph = placeholder()
         #import ipdb; ipdb.set_trace()
-        #len(ph)
+        # len(ph)
         #assert ph(range(10)) == 10
         ph = placeholder()
         reversed(ph)
@@ -47,7 +48,7 @@ class TestPlaceHolder(object):
         #assert ph([1,2,3]) == True
         #ph = placeholder()
         #g = (i for i in ph)
-        #ph([1,2,3])
+        # ph([1,2,3])
         #assert list(g) == [1,2,3]
 
     def test_instance_compare_ops(self):
@@ -58,14 +59,14 @@ class TestPlaceHolder(object):
         ph = placeholder()
         ph < 0
         assert ph(-1) is True
-        assert ph(1)  is False
+        assert ph(1) is False
         ph = placeholder()
         ph == 0
-        assert ph(0)  is True
+        assert ph(0) is True
         assert ph(-1) is False
         ph = placeholder()
         ph >= 0
-        assert ph(0)  is True
+        assert ph(0) is True
         assert ph(-1) is False
         ph = placeholder()
         ph <= 0
@@ -73,11 +74,12 @@ class TestPlaceHolder(object):
         assert ph(1) is False
 
     def test_instance_attr_access_ops(self):
-        class A: a = 1
+        class A:
+            a = 1
         ph = placeholder()
         #import ipdb; ipdb.set_trace()
         ph.a
-        assert ph(A)   == 1
+        assert ph(A) == 1
         assert ph(A()) == 1
 
     def test_multiple_instance(self):
@@ -91,7 +93,9 @@ class TestPlaceHolder(object):
         ph = placeholder + 1
         assert ph._chain[0].func is operator.add
         assert ph(1) == 2
-        class A: a = 1
+
+        class A:
+            a = 1
         ph = placeholder.a
         assert ph(A) == 1
         assert ph(A()) == 1

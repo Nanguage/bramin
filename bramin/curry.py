@@ -22,7 +22,7 @@ class curry(object):
     2
     """
 
-    def __init__(self, func:Callable, *args, **kwargs):
+    def __init__(self, func: Callable, *args, **kwargs):
         if not callable(func):
             raise type_error(f"{type(self)}.__init__", callable, type(func))
 
@@ -32,7 +32,8 @@ class curry(object):
         self.func = ori_func
         sig = signature(ori_func)
         self._params = list(sig.parameters.items())
-        self._bindings = od([(n, p.default) for n, p in sig.parameters.items()])
+        self._bindings = od([(n, p.default)
+                             for n, p in sig.parameters.items()])
 
         if is_p and hasattr(func, '_bindings'):
             self._bindings.update(func._bindings)
@@ -64,8 +65,10 @@ class curry(object):
     def args(self) -> tuple:
         args_ = []
         for name, p in self._params:
-            if p.default is not _empty: break
-            if self._bindings[name] is _empty: break
+            if p.default is not _empty:
+                break
+            if self._bindings[name] is _empty:
+                break
             args_.append(self._bindings[name])
         return tuple(args_)
 
@@ -73,7 +76,8 @@ class curry(object):
     def keywords(self) -> dict:
         kwargs = {}
         for name, p in self._params:
-            if p.default is _empty: continue
+            if p.default is _empty:
+                continue
             kwargs[name] = self._bindings[name]
         return kwargs
 
@@ -88,7 +92,7 @@ class curry(object):
     def __repr__(self):
         bound = {
             n: v for n, v in self._bindings.items()
-            if v is not _empty }
+            if v is not _empty}
         b = ", ".join([f"{n}={repr(v)}" for n, v in bound.items()])
         s = f"<curry {self.__name__}{' ' + b if b else ''}>"
         return s
