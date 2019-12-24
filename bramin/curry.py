@@ -1,17 +1,29 @@
 from typing import Callable
-from functools import partial, update_wrapper
-from inspect import _empty, signature
-from copy import copy
+from functools import update_wrapper
+from inspect import _empty, signature, Signature, Parameter
 from collections import OrderedDict as od
+from copy import copy
 
 from ._utils import (
     type_error, is_partial_like
 )
 
 
+def init_bindings(sig: Signature) -> od:
+    bids = od([])
+    for n, p in sig.parameters.items():
+        if p.kind is Parameter.VAR_POSITIONAL:
+            bids[n] = tuple()
+        elif p.kind is Parameter.VAR_KEYWORD:
+            bids[n] = dict()
+        else:
+            bids[n] = p.default
+    return bids
+
+
 class curry(object):
     """
-    [Deprecated] built-in and *args func are not supported.
+    [NOTE] built-in func are not supported yet.
 
     Basically it's same to toolz.curry,
     but the argument binding behavior like this is allowed:
@@ -31,9 +43,8 @@ class curry(object):
 
         self.func = ori_func
         sig = signature(ori_func)
-        self._params = list(sig.parameters.items())
-        self._bindings = od([(n, p.default)
-                             for n, p in sig.parameters.items()])
+        self._params = od(sig.parameters)
+        self._bindings = init_bindings(sig)
 
         if is_p and hasattr(func, '_bindings'):
             self._bindings.update(func._bindings)
@@ -43,48 +54,71 @@ class curry(object):
 
         update_wrapper(self, ori_func)
 
-    def _bind(self, *args, **kwargs):
-        self._update_binding(self._bindings, args, kwargs)
+    def _var_kw_param(self):
+        n, p = next(reversed(self._params.items()))
+        if p.kind is Parameter.VAR_KEYWORD:
+            return n
+        else:
+            return None
 
-    def _update_binding(self, bindings, args, kwargs):
-        bids = bindings
-        pars = self._params
-        for val in args:
-            for name, p in pars:
-                if bids[name] is _empty or p.default is not _empty:
+    def _bind(self, *args, **kwargs):
+        bids = self._bindings
+        for val in args:  # bind positional
+            for name, p in self._params.items():
+                if (p.default is not _empty) or (bids[name] is _empty):
                     bids[name] = val
                     break
-        for name, val in kwargs.items():
-            bids[name] = val
+                if p.kind is Parameter.VAR_POSITIONAL:
+                    bids[name] = bids[name] + (val,)
+                    break
+        for name, val in kwargs.items():  # bind keywords
+            if name in bids:
+                bids[name] = val
+            else:
+                p_varkw = self._var_kw_param()
+                if not p_varkw:
+                    raise TypeError(f"{self} got an unexpected keyword argument {repr(name)}")
+                bids[p_varkw] = copy(bids[p_varkw])
+                bids[p_varkw][name] = val
 
     @property
-    def all_bound(self) -> bool:
-        return all([p is not _empty for _, p in self._bindings.items()])
+    def _all_bound(self) -> bool:
+        return all([b is not _empty for b in self._bindings.values()])
 
     @property
     def args(self) -> tuple:
         args_ = []
-        for name, p in self._params:
+        for name, p in self._params.items():
             if p.default is not _empty:
                 break
             if self._bindings[name] is _empty:
                 break
-            args_.append(self._bindings[name])
+            if p.kind is Parameter.VAR_KEYWORD:
+                break
+
+            if p.kind is Parameter.VAR_POSITIONAL:
+                args_.extend(self._bindings[name])
+            else:
+                args_.append(self._bindings[name])
         return tuple(args_)
 
     @property
     def keywords(self) -> dict:
         kwargs = {}
-        for name, p in self._params:
-            if p.default is _empty:
+        for name, p in self._params.items():
+            if (p.default is _empty) and (p.kind is not Parameter.VAR_KEYWORD):
                 continue
-            kwargs[name] = self._bindings[name]
+
+            if p.kind is Parameter.VAR_KEYWORD:
+                kwargs.update(self._bindings[name])
+            else:
+                kwargs[name] = self._bindings[name]
         return kwargs
 
     def __call__(self, *args, **kwargs):
         # this call has big overhead, need to improve
         new = type(self)(self, *args, **kwargs)
-        if new.all_bound:
+        if new._all_bound:
             return new.func(*new.args, **new.keywords)
         else:
             return new

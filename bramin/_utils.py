@@ -6,6 +6,7 @@ import builtins
 from functools import wraps, partial
 import inspect
 import types
+from functools import reduce
 
 import typing_inspect as ti
 
@@ -302,3 +303,14 @@ def get_callable_name(func: Callable) -> str:
     else:
         name = get_callable_name(type(func).__call__)
     return name
+
+
+def signature(obj):
+    """Get signature function,
+    try to support builtin functions, like: map, filter."""
+    if obj in {map, filter, reduce}:
+        if obj is map:
+            return inspect.Signature()
+    else:
+        return inspect.signature(obj)
+
