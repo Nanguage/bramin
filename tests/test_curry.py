@@ -36,3 +36,24 @@ class TestCurry(object):
         assert add_(1, 2) == 3
         assert add_(c=3)(1, 2) == 6 == add_(1, 2, c=3)
         assert add_(1, 2, c=3, d=4) == 10
+
+    def test_builtin_func(self):
+        map_ = curry(map)
+        assert (list(map_(lambda x: x+1)(range(10))) ==
+                list(map_(lambda x: x+1, range(10))) ==
+                list(range(1, 11)))
+
+        def is_odd(i):
+            return i % 2 != 0
+
+        filter_ = curry(filter)
+        assert (list(filter_(is_odd, range(10))) ==
+                list(filter_(is_odd)(range(10))) ==
+                list(filter(is_odd, range(10))))
+        from functools import reduce
+        reduce_ = curry(reduce)
+
+        def add(a, b):
+            return a + b
+
+        assert reduce_(add, range(10)) == reduce_(add)(range(10)) == reduce(add, range(10))

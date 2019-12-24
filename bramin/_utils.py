@@ -5,6 +5,8 @@ import operator
 import builtins
 from functools import wraps, partial
 import inspect
+from inspect import Signature, Parameter
+from collections import OrderedDict as od
 import types
 from functools import reduce
 
@@ -307,10 +309,25 @@ def get_callable_name(func: Callable) -> str:
 
 def signature(obj):
     """Get signature function,
-    try to support builtin functions, like: map, filter."""
-    if obj in {map, filter, reduce}:
-        if obj is map:
-            return inspect.Signature()
+    try to support builtin functions:
+        map, filter, functools.reduce
+    """
+    if obj is map:
+        return Signature([
+            Parameter("func", Parameter.POSITIONAL_OR_KEYWORD),
+            Parameter("iter", Parameter.POSITIONAL_OR_KEYWORD),
+            Parameter("iterables", Parameter.VAR_POSITIONAL),
+        ])
+    elif obj is filter:
+        return Signature([
+            Parameter("func", Parameter.POSITIONAL_OR_KEYWORD),
+            Parameter("iter", Parameter.POSITIONAL_OR_KEYWORD),
+        ])
+    elif obj is reduce:
+        return Signature([
+            Parameter("func", Parameter.POSITIONAL_OR_KEYWORD),
+            Parameter("sequence", Parameter.POSITIONAL_OR_KEYWORD),
+        ])
     else:
         return inspect.signature(obj)
 

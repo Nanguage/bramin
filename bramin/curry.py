@@ -1,11 +1,11 @@
 from typing import Callable
 from functools import update_wrapper
-from inspect import _empty, signature, Signature, Parameter
+from inspect import _empty, Signature, Parameter
 from collections import OrderedDict as od
 from copy import copy
 
 from ._utils import (
-    type_error, is_partial_like
+    type_error, is_partial_like, signature
 )
 
 
@@ -23,7 +23,8 @@ def init_bindings(sig: Signature) -> od:
 
 class curry(object):
     """
-    [NOTE] built-in func are not supported yet.
+    [NOTE] Now, built-in func only support:
+        map, filter, reduce.
 
     Basically it's same to toolz.curry,
     but the argument binding behavior like this is allowed:
