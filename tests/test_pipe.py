@@ -1,8 +1,6 @@
 import sys
 sys.path.insert(0, '.')
-import operator
 from operator import add
-from functools import reduce
 
 import toolz
 from toolz import curry as c
@@ -38,21 +36,21 @@ class TestPipe(object):
         assert ans == list(range(2, 12))
 
     def test_placeholder_in_func(self):
-        pipe = P | c(map, lambda x: x+1, _x_) | list
+        pipe = P | c(map, lambda x: x+1, it) | list
         ans = pipe(range(10))
         assert ans == list(range(1, 11))
-        ans = range(5) | P | c(toolz.accumulate, add, _x_) | list | END
+        ans = range(5) | P | c(toolz.accumulate, add, it) | list | END
         assert ans == [0, 1, 3, 6, 10]
-        pipe = P | _x_ + _x_
+        pipe = P | it + it
         assert pipe(1) == 2
-        pipe = P | _x_ + _x_ + _x_ - 1
+        pipe = P | it + it + it - 1
         assert pipe(1) == 2
         assert pipe(1) == 2
 
     def test_placeholder_in_pipe(self):
-        id_f = P | _x_
+        id_f = P | it
         assert id_f([1, 2, 3]) == [1, 2, 3]
-        assert 1 | P | _x_ + 1 | _x_ // 2 | END == 1
+        assert 1 | P | it + 1 | it // 2 | END == 1
         #g = range(10) | P | (i for i in _x_) | END
         #assert list(g) == list(range(10))
 
@@ -61,31 +59,31 @@ class TestPipe(object):
         df = pd.DataFrame([[1, 2, 3],
                            [2, 3, 4],
                            [4, 3, 1]], columns=['a', 'b', 'c'])
-        pipe = P | _x_[_x_['a'] > 2].shape[0]
+        pipe = P | it[it['a'] > 2].shape[0]
         assert pipe(df) == 1
         assert df | P | pipe | END == 1
-        assert df | P | _x_[_x_['a'] > 2].shape[0] | END == 1
+        assert df | P | it[it['a'] > 2].shape[0] | END == 1
 
     def test_with_numpy(self):
         import numpy as np
         a = np.arange(10)
         pipe = P | np.sum
         assert pipe(a) == 45
-        pipe = P | np.sin | _x_.shape[0]
+        pipe = P | np.sin | it.shape[0]
         assert pipe(a) == 10
-        pipe = P | np.sin(_x_) | _x_.shape[0]
+        pipe = P | np.sin(it) | it.shape[0]
         assert pipe(a) == 10
         assert a | P | pipe | END == 10
 
         b = np.linspace(0, 2*np.pi, 100)
-        pipe = P | c(add, _x_, np.sin(_x_))
+        pipe = P | c(add, it, np.sin(it))
         assert type(pipe(b)) is np.ndarray
         assert pipe(b).shape == b.shape
-        pipe = P | _x_[:10]
+        pipe = P | it[:10]
         assert (b | P | pipe | END).shape[0] == 10
-        pipe = P | (_x_ > np.pi)
+        pipe = P | (it > np.pi)
         assert sum(pipe(b)) == 50
-        pipe = P | _x_[_x_ > np.pi]
+        pipe = P | it[it > np.pi]
         assert pipe(b).min() > np.pi
 
     def test_write_text(self, tmp_f):
